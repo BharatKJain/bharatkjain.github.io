@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>Bharat Jain - thoughts</title>
+    <link href="https://bharatkjain.me/tags/thoughts/atom.xml" rel="self" type="application/atom+xml"/>
+    <link href="https://bharatkjain.me"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2023-10-23T00:00:00+00:00</updated>
+    <id>https://bharatkjain.me/tags/thoughts/atom.xml</id>
+    <entry xml:lang="en">
+        <title>Why build a personal portfolio website?</title>
+        <published>2023-10-23T00:00:00+00:00</published>
+        <updated>2023-10-23T00:00:00+00:00</updated>
+        <author>
+          <name>Unknown</name>
+        </author>
+        <link rel="alternate" href="https://bharatkjain.me/tils/why-personal-website/" type="text/html"/>
+        <id>https://bharatkjain.me/tils/why-personal-website/</id>
+        
+        <content type="html">&lt;p&gt;Inspired from a &lt;a href=&quot;https:&#x2F;&#x2F;twitter.com&#x2F;_svs_&#x2F;status&#x2F;1716347991835984184&quot;&gt;twitter thread&lt;&#x2F;a&gt; by Siddharth Sharma(ex-CTO, Shaadi.com), &lt;strong&gt;please give it a read.&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Key reasons:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Showcase skills to recruiters by adding project links and technical posts.&lt;&#x2F;li&gt;
+&lt;li&gt;Build your own second brain, dumping technical docs in markdown.&lt;&#x2F;li&gt;
+&lt;li&gt;Opportunity to learn about hosting static websites(specially for backend engineers) and working on raw CSS.&lt;&#x2F;li&gt;
+&lt;li&gt;A good way to find like-minded people and share your work with them.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Death by tech infrastructure operations</title>
+        <published>2023-01-04T08:10:55+05:30</published>
+        <updated>2023-01-04T08:10:55+05:30</updated>
+        <author>
+          <name>Unknown</name>
+        </author>
+        <link rel="alternate" href="https://bharatkjain.me/posts/death-by-operations/" type="text/html"/>
+        <id>https://bharatkjain.me/posts/death-by-operations/</id>
+        
+        <content type="html"></content>
+        
+    </entry>
+</feed>

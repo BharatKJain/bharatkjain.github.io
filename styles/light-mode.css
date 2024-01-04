@@ -1,0 +1,391 @@
+:root {
+    /* Base styles */
+    --font-primary: 'IBM Plex Sans', Verdana, sans-serif;
+    --color-primary-text: #444;
+    --color-background: #eaeaea;
+    --color-headline: #222;
+    --color-link: #3273dc;
+    --color-link-hover: #3273dc;
+    --color-selection: #FDD9B5;
+    --color-selection-text: #333;
+    --color-code-bg: #f4f4f4;
+    /* Projects section */
+    --color-background-project: #f9f9f9;
+    --color-background-project-hover: #ecebeb;
+    /* Tags */
+    --color-tag-bg: #FFE4C7;
+    --color-tag-border: #FFCBA4;
+    --color-tag-text: #D35400;
+    --color-tag-hover: #FFD9B0;
+    /* Other elements */
+    --color-blogpost-visited: #8b6fcb;
+}
+
+body {
+    font-family: var(--font-primary);
+    font-size: 16px;
+    margin: auto;
+    padding: 20px;
+    max-width: 720px;
+    text-align: left;
+    background-color: var(--color-background);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
+    color: var(--color-primary-text);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+strong,
+b {
+    color: var(--color-headline);
+}
+
+a {
+    color: var(--color-link);
+    text-decoration: none;
+}
+
+.title {
+    text-decoration: none;
+    border: 0;
+}
+
+.title span {
+    font-weight: 400;
+}
+
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+nav a {
+    margin-right: 10px;
+}
+
+textarea {
+    width: 100%;
+    font-size: 1rem;
+}
+
+input {
+    font-size: 1rem;
+}
+
+main,
+article {
+    line-height: 1.6;
+}
+
+table {
+    width: 100%;
+}
+
+img {
+    max-width: 100%;
+}
+
+code {
+    padding: 2px 5px;
+    color: var(--color-primary-text);
+    background-color: var(--color-code-bg);
+}
+
+pre code {
+    font-family: 'IBM Plex Mono', monospace;
+    display: block;
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 0.875rem;
+    overflow-x: auto;
+}
+
+pre[class^="language-"] {
+    background-color: inherit;
+    color: inherit;
+    border-radius: inherit;
+}
+
+code[class^="language-"] {
+    background-color: inherit;
+    color: inherit;
+    border-radius: inherit;
+}
+
+div.highlight pre {
+    background-color: initial;
+    color: initial;
+}
+
+div.highlight code {
+    background-color: unset;
+    color: unset;
+}
+
+blockquote {
+    border-left: 1px solid #999;
+    color: var(--color-blockquote-dark);
+    padding-left: 20px;
+    font-style: italic;
+}
+
+#credits {
+    text-align: center;
+    font-style: italic;
+    font-size: 14px;
+}
+
+footer {
+    padding: 25px;
+    text-align: center;
+}
+
+.helptext {
+    color: #777;
+    font-size: small;
+}
+
+.errorlist {
+    color: #eba613;
+    font-size: small;
+}
+
+/* blog posts */
+ul.blog-posts {
+    list-style-type: none;
+    padding: unset;
+}
+
+ul.blog-posts li {
+    display: flex;
+}
+
+ul.blog-posts li span {
+    flex: 0 0 130px;
+}
+
+ul.blog-posts li a:visited {
+    color: #8b6fcb;
+}
+
+
+.home-container {
+    display: flex;
+    align-items: start;
+    /* Makes sure items start from the top */
+}
+
+.home-image {
+    flex: 1;
+    /* Takes up 1 portion of the flex container */
+    max-width: 200px;
+    /* Example width, adjust as needed */
+    margin-left: 20px;
+}
+
+.home-content {
+    flex: 2;
+    /* Takes up 2 portions of the flex container */
+}
+
+.img-rounded {
+    border-radius: 50%;
+    /* Rounds the image */
+    width: 100%;
+    /* filter: grayscale(100%); */
+    object-fit: cover;
+}
+
+.projects-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.projects-list {
+    padding: 0;
+    /* Remove default padding */
+    margin: 0;
+    /* Remove default margin */
+    width: 100%;
+    /* Ensure it takes up full width of its container */
+    max-width: 600px;
+    /* Limit the maximum width */
+    list-style: none;
+    /* To remove bullet points */
+    box-sizing: border-box;
+}
+
+.proj {
+    border: 1px solid var(--color-background);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    position: relative;
+    background-color: var(--color-background-project);
+    /* Light gray background for a bit of distinction */
+    transition: background-color 0.2s ease;
+    /* Smooth transition for hover effects */
+}
+
+.proj .name {
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.proj .desc {
+    margin-bottom: 1rem;
+}
+
+.proj .links a {
+    color: var(--color-link);
+    /* Using the existing link color variable */
+    text-decoration: none;
+    margin-left: 0.5rem;
+    transition: color 0.3s ease;
+    /* Smoothens the color transition on hover */
+}
+
+.proj .links a:hover {
+    color: var(--color-link-hover);
+    /* Using the existing link hover color variable */
+    text-decoration: underline;
+}
+
+.proj .links {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+}
+
+.proj:hover {
+    background-color: var(--color-background-project-hover);
+    /* Slightly lighter background on hover */
+}
+
+/* 
+Theme for theme-toggle button
+*/
+
+.sun-and-moon> :is(.moon, .sun, .sun-beams) {
+    transform-origin: center;
+}
+
+.sun-and-moon> :is(.moon, .sun) {
+    fill: var(--icon-fill);
+}
+
+.theme-toggle:is(:hover, :focus-visible)>.sun-and-moon> :is(.moon, .sun) {
+    fill: var(--icon-fill-hover);
+}
+
+.sun-and-moon>.sun-beams {
+    stroke: var(--icon-fill);
+    stroke-width: 2px;
+}
+
+.theme-toggle:is(:hover, :focus-visible) .sun-and-moon>.sun-beams {
+    stroke: var(--icon-fill-hover);
+}
+
+[data-theme="dark"] .sun-and-moon>.sun {
+    transform: scale(1.75);
+}
+
+[data-theme="dark"] .sun-and-moon>.sun-beams {
+    opacity: 0;
+}
+
+[data-theme="dark"] .sun-and-moon>.moon>circle {
+    transform: translateX(-7px);
+}
+
+@supports (cx: 1) {
+    [data-theme="dark"] .sun-and-moon>.moon>circle {
+        cx: 17;
+        transform: translateX(0);
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .sun-and-moon>.sun {
+        transition: transform .5s var(--ease-elastic-3);
+    }
+
+    .sun-and-moon>.sun-beams {
+        transition: transform .5s var(--ease-elastic-4), opacity .5s var(--ease-3);
+    }
+
+    .sun-and-moon .moon>circle {
+        transition: transform .25s var(--ease-out-5);
+    }
+
+    @supports (cx: 1) {
+        .sun-and-moon .moon>circle {
+            transition: cx .25s var(--ease-out-5);
+        }
+    }
+
+    [data-theme="dark"] .sun-and-moon>.sun {
+        transition-timing-function: var(--ease-3);
+        transition-duration: .25s;
+        transform: scale(1.75);
+    }
+
+    [data-theme="dark"] .sun-and-moon>.sun-beams {
+        transition-duration: .15s;
+        transform: rotateZ(-25deg);
+    }
+
+    [data-theme="dark"] .sun-and-moon>.moon>circle {
+        transition-duration: .5s;
+        transition-delay: .25s;
+    }
+
+}
+
+.theme-toggle {
+    --size: 1.7rem;
+    /* --icon-fill: hsla(40, 100%, 42%, 0.841); */
+    --icon-fill: #E69B00;
+    --icon-fill-hover: #a26c00;
+
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    margin: 0;
+
+    inline-size: var(--size);
+    block-size: var(--size);
+    aspect-ratio: 1;
+    border-radius: 50%;
+
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+
+    outline-offset: 5px;
+
+    &>svg {
+        inline-size: 100%;
+        block-size: 100%;
+        stroke-linecap: round;
+    }
+
+
+    @media (hover: none) {
+        --size: 48px;
+
+
+    }
+}

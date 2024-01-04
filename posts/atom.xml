@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>Bharat Jain - Posts</title>
+    <link href="https://bharatkjain.me/posts/atom.xml" rel="self" type="application/atom+xml"/>
+    <link href="https://bharatkjain.me/posts/"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2023-10-24T04:00:00+05:30</updated>
+    <id>https://bharatkjain.me/posts/atom.xml</id>
+    <entry xml:lang="en">
+        <title>Debugging and Enabling graceful shutdown in Kubernetes</title>
+        <published>2023-10-24T04:00:00+05:30</published>
+        <updated>2023-10-24T04:00:00+05:30</updated>
+        <author>
+          <name>Unknown</name>
+        </author>
+        <link rel="alternate" href="https://bharatkjain.me/posts/debugging-graceful-shutdown/" type="text/html"/>
+        <id>https://bharatkjain.me/posts/debugging-graceful-shutdown/</id>
+        
+        <content type="html">&lt;p&gt;This article is referenced from &lt;a href=&quot;https:&#x2F;&#x2F;blog.risingstack.com&#x2F;graceful-shutdown-node-js-kubernetes&#x2F;&quot;&gt;&amp;quot;Rising Stack - Graceful shutdown with Node.js and Kubernetes&amp;quot;&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;tl-dr&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#tl-dr&quot; aria-label=&quot;Anchor link for: tl-dr&quot;&gt;🔗&lt;&#x2F;a&gt;TL;DR&lt;&#x2F;h2&gt;
+&lt;h2 id=&quot;pre-requisites&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#pre-requisites&quot; aria-label=&quot;Anchor link for: pre-requisites&quot;&gt;🔗&lt;&#x2F;a&gt;Pre-requisites:&lt;&#x2F;h2&gt;
+&lt;ul&gt;
+&lt;li&gt;Basic Kubernetes knowledge, relation between nodes and pods.&lt;&#x2F;li&gt;
+&lt;li&gt;Understanding of linux signals and handling them in code.&lt;&#x2F;li&gt;
+&lt;li&gt;Kubernetes readiness and liveness probes.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;why-handle-graceful-shutdown&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#why-handle-graceful-shutdown&quot; aria-label=&quot;Anchor link for: why-handle-graceful-shutdown&quot;&gt;🔗&lt;&#x2F;a&gt;Why handle graceful-shutdown?&lt;&#x2F;h2&gt;
+&lt;p&gt;When running AWS EC2 spot instances in AWS EKS to save cost for infrastructure, the EC2 instance is taken down randomly based on availability, in such cases we have to handle the termination of pods that were running inside the node.&lt;&#x2F;p&gt;
+&lt;p&gt;Even if we’re running workloads on EC2 on-demand instances, there are still chances that some pods can go-down in such cases also we need to handle their termination.&lt;&#x2F;p&gt;
+&lt;p&gt;Whenever a pod gets terminated in Kubernetes, the main process of the container receives the SIGTERM.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;what-is-graceful-shutdown-and-how-to-handle-it-in-kubernetes-workloads&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#what-is-graceful-shutdown-and-how-to-handle-it-in-kubernetes-workloads&quot; aria-label=&quot;Anchor link for: what-is-graceful-shutdown-and-how-to-handle-it-in-kubernetes-workloads&quot;&gt;🔗&lt;&#x2F;a&gt;What is graceful-shutdown and how to handle it in Kubernetes workloads?&lt;&#x2F;h2&gt;
+&lt;p&gt;In Kubernetes, for a proper graceful shutdown we need to add a readinessProbe to our application’s Deployment yaml and let the Service’s load balancer know during the shutdown that we will not serve more requests so it should stop sending them. We can close the server, tear down the DB connections and exit only after that.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;process-as-shown-in-diagram&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#process-as-shown-in-diagram&quot; aria-label=&quot;Anchor link for: process-as-shown-in-diagram&quot;&gt;🔗&lt;&#x2F;a&gt;Process(as shown in diagram):&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;img src=&quot;&#x2F;images&#x2F;graceful-shutdown-k8s.png&quot; alt=&quot;&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Application pod receives SIGTERM signal on process ID 0 because Kubernetes wants to stop it – because of deploy, scale, etc.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;App (pod) starts to return 500 for GET &#x2F;health to let readinessProbe (Service) know that it’s not ready to receive more requests.&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Kubernetes readinessProbe checks GET &#x2F;health and after (failureThreshold * periodSecond) it stops redirecting traffic to the app (because it continuously returns 500)&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;App waits (failureThreshold * periodSecond) before it starts to shut down – to make sure that the Service is getting notified via readinessProbe fail&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;App starts graceful shutdown&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;App first closes server with live working DB connections&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;App closes databases after the server is closed&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;App exits process&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;
+&lt;p&gt;Kubernetes force kills the application after 30s (SIGKILL) if it’s still running (in an optimal case it doesn’t happen), we can increase the SIGKILL time using terminationGracePeriodSeconds&lt;&#x2F;p&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;h2 id=&quot;how-does-istio-sidecar-handle-the-graceful-shutdown&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#how-does-istio-sidecar-handle-the-graceful-shutdown&quot; aria-label=&quot;Anchor link for: how-does-istio-sidecar-handle-the-graceful-shutdown&quot;&gt;🔗&lt;&#x2F;a&gt;How does Istio sidecar handle the graceful-shutdown?&lt;&#x2F;h2&gt;
+&lt;p&gt;Istio sidecar intercepts all the incoming traffic to the pod, thus it also halts the traffic, by handling readinessProbe configuration in sidecar, we have seen that even if the readiness probe is not configured correctly in application, the sidecar halts the traffic, and starts draining, we should explicitly keep the readiness probe correctly configured in application container, even though sidecar will halt the traffic.&lt;&#x2F;p&gt;
+&lt;p&gt;Istio configmap change required for istio sidecar graceful termination:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#2b303b;color:#c0c5ce;&quot;&gt;&lt;code&gt;&lt;span&gt;    defaultConfig:
+&lt;&#x2F;span&gt;&lt;span&gt;      holdApplicationUntilProxyStarts: true
+&lt;&#x2F;span&gt;&lt;span&gt;      terminationDrainDuration: 60s
+&lt;&#x2F;span&gt;&lt;span&gt;      proxyMetadata:
+&lt;&#x2F;span&gt;&lt;span&gt;        EXIT_ON_ZERO_ACTIVE_CONNECTIONS: &amp;#39;true&amp;#39;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Sidecar waits for 60s so application can terminate the connections and then it kills the sidecar. For more information please refer to istio documentation. &lt;&#x2F;p&gt;
+&lt;p&gt;This was a long-pending issue with sidecar, previously this was handled using preStop hook - issue link.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;gotcha-sigterm-is-sent-to-process-id-0-which-can-be-bash&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#gotcha-sigterm-is-sent-to-process-id-0-which-can-be-bash&quot; aria-label=&quot;Anchor link for: gotcha-sigterm-is-sent-to-process-id-0-which-can-be-bash&quot;&gt;🔗&lt;&#x2F;a&gt;GOTCHA! - SIGTERM is sent to process ID 0, which can be bash&lt;&#x2F;h2&gt;
+&lt;p&gt;When we added the code for term signal handling, we saw a weird issue where the container exited on receiving the SIGTERM, which meant that something killed it, at this point we realised that Kubernetes is sending the SIGTERM to main process - process ID 0 i.e. the bash parent process which starts the server, then we had to add more support in bash, where we added a trap for SIGTERM and forwarded SIGTERM to application process ID.&lt;&#x2F;p&gt;
+&lt;p&gt;On the other hand, we can avoid the bash in process ID 0 in some cases where there&#x27;s no script or script can be removed, and we can make the application executable&#x2F;binary run on process ID 0, so there’s no need to add an extra handler.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;reference-articles&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#reference-articles&quot; aria-label=&quot;Anchor link for: reference-articles&quot;&gt;🔗&lt;&#x2F;a&gt;Reference articles&lt;&#x2F;h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;istio&#x2F;istio&#x2F;issues&#x2F;11130&quot;&gt;Making istio sidecar ready before application start - holdApplicationUntilProxyStarts&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;istio&#x2F;istio&#x2F;issues&#x2F;34855&quot;&gt;Draining sidecar connections - terminationDrainDuration&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;a href=&quot;https:&#x2F;&#x2F;istio.io&#x2F;latest&#x2F;docs&#x2F;ops&#x2F;configuration&#x2F;mesh&#x2F;app-health-check&#x2F;&quot;&gt;Istio healthcheck&lt;&#x2F;a&gt;&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Death by tech infrastructure operations</title>
+        <published>2023-01-04T08:10:55+05:30</published>
+        <updated>2023-01-04T08:10:55+05:30</updated>
+        <author>
+          <name>Unknown</name>
+        </author>
+        <link rel="alternate" href="https://bharatkjain.me/posts/death-by-operations/" type="text/html"/>
+        <id>https://bharatkjain.me/posts/death-by-operations/</id>
+        
+        <content type="html"></content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Markdown Syntax Guide</title>
+        <published>2020-01-03T00:00:00+00:00</published>
+        <updated>2020-01-03T00:00:00+00:00</updated>
+        <author>
+          <name>Unknown</name>
+        </author>
+        <link rel="alternate" href="https://bharatkjain.me/posts/markdown-syntax/" type="text/html"/>
+        <id>https://bharatkjain.me/posts/markdown-syntax/</id>
+        
+        <content type="html">&lt;p&gt;For a quick cheatsheet, check out &lt;a href=&quot;https:&#x2F;&#x2F;simplemde.com&#x2F;markdown-guide&quot;&gt;https:&#x2F;&#x2F;simplemde.com&#x2F;markdown-guide&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;hr &#x2F;&gt;
+&lt;p&gt;This article offers a sample of basic Markdown syntax that can be used in Zola content files, also it shows whether basic HTML elements are decorated with CSS in a Zola theme.&lt;&#x2F;p&gt;
+&lt;!--more--&gt;
+&lt;h2 id=&quot;headings&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#headings&quot; aria-label=&quot;Anchor link for: headings&quot;&gt;🔗&lt;&#x2F;a&gt;Headings&lt;&#x2F;h2&gt;
+&lt;p&gt;The following HTML &lt;code&gt;&amp;lt;h1&amp;gt;&lt;&#x2F;code&gt;—&lt;code&gt;&amp;lt;h6&amp;gt;&lt;&#x2F;code&gt; elements represent six levels of section headings. &lt;code&gt;&amp;lt;h1&amp;gt;&lt;&#x2F;code&gt; is the highest section level while &lt;code&gt;&amp;lt;h6&amp;gt;&lt;&#x2F;code&gt; is the lowest.&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;h1&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#h1&quot; aria-label=&quot;Anchor link for: h1&quot;&gt;🔗&lt;&#x2F;a&gt;H1&lt;&#x2F;h1&gt;
+&lt;h2 id=&quot;h2&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#h2&quot; aria-label=&quot;Anchor link for: h2&quot;&gt;🔗&lt;&#x2F;a&gt;H2&lt;&#x2F;h2&gt;
+&lt;h3 id=&quot;h3&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#h3&quot; aria-label=&quot;Anchor link for: h3&quot;&gt;🔗&lt;&#x2F;a&gt;H3&lt;&#x2F;h3&gt;
+&lt;h4 id=&quot;h4&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#h4&quot; aria-label=&quot;Anchor link for: h4&quot;&gt;🔗&lt;&#x2F;a&gt;H4&lt;&#x2F;h4&gt;
+&lt;h5 id=&quot;h5&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#h5&quot; aria-label=&quot;Anchor link for: h5&quot;&gt;🔗&lt;&#x2F;a&gt;H5&lt;&#x2F;h5&gt;
+&lt;h6 id=&quot;h6&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#h6&quot; aria-label=&quot;Anchor link for: h6&quot;&gt;🔗&lt;&#x2F;a&gt;H6&lt;&#x2F;h6&gt;
+&lt;h2 id=&quot;paragraph&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#paragraph&quot; aria-label=&quot;Anchor link for: paragraph&quot;&gt;🔗&lt;&#x2F;a&gt;Paragraph&lt;&#x2F;h2&gt;
+&lt;p&gt;Xerum, quo qui aut unt expliquam qui dolut labo. Aque venitatiusda cum, voluptionse latur sitiae dolessi aut parist aut dollo enim qui voluptate ma dolestendit peritin re plis aut quas inctum laceat est volestemque commosa as cus endigna tectur, offic to cor sequas etum rerum idem sintibus eiur? Quianimin porecus evelectur, cum que nis nust voloribus ratem aut omnimi, sitatur? Quiatem. Nam, omnis sum am facea corem alique molestrunt et eos evelece arcillit ut aut eos eos nus, sin conecerem erum fuga. Ri oditatquam, ad quibus unda veliamenimin cusam et facea ipsamus es exerum sitate dolores editium rerore eost, temped molorro ratiae volorro te reribus dolorer sperchicium faceata tiustia prat.&lt;&#x2F;p&gt;
+&lt;p&gt;Itatur? Quiatae cullecum rem ent aut odis in re eossequodi nonsequ idebis ne sapicia is sinveli squiatum, core et que aut hariosam ex eat.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;blockquotes&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#blockquotes&quot; aria-label=&quot;Anchor link for: blockquotes&quot;&gt;🔗&lt;&#x2F;a&gt;Blockquotes&lt;&#x2F;h2&gt;
+&lt;p&gt;The blockquote element represents content that is quoted from another source, optionally with a citation which must be within a &lt;code&gt;footer&lt;&#x2F;code&gt; or &lt;code&gt;cite&lt;&#x2F;code&gt; element, and optionally with in-line changes such as annotations and abbreviations.&lt;&#x2F;p&gt;
+&lt;h4 id=&quot;blockquote-without-attribution&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#blockquote-without-attribution&quot; aria-label=&quot;Anchor link for: blockquote-without-attribution&quot;&gt;🔗&lt;&#x2F;a&gt;Blockquote without attribution&lt;&#x2F;h4&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Tiam, ad mint andaepu dandae nostion secatur sequo quae.
+&lt;strong&gt;Note&lt;&#x2F;strong&gt; that you can use &lt;em&gt;Markdown syntax&lt;&#x2F;em&gt; within a blockquote.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h4 id=&quot;blockquote-with-attribution&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#blockquote-with-attribution&quot; aria-label=&quot;Anchor link for: blockquote-with-attribution&quot;&gt;🔗&lt;&#x2F;a&gt;Blockquote with attribution&lt;&#x2F;h4&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Don&#x27;t communicate by sharing memory, share memory by communicating.&lt;br&gt;
+— &lt;cite&gt;Rob Pike&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#1&quot;&gt;1&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;&lt;&#x2F;cite&gt;&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;1&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;1&lt;&#x2F;sup&gt;
+&lt;p&gt;The above quote is excerpted from Rob Pike&#x27;s &lt;a href=&quot;https:&#x2F;&#x2F;www.youtube.com&#x2F;watch?v=PAAkCSZUG1c&quot;&gt;talk&lt;&#x2F;a&gt; during Gopherfest, November 18, 2015.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+&lt;h2 id=&quot;tables&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#tables&quot; aria-label=&quot;Anchor link for: tables&quot;&gt;🔗&lt;&#x2F;a&gt;Tables&lt;&#x2F;h2&gt;
+&lt;p&gt;Tables aren&#x27;t part of the core Markdown spec, but Hugo supports supports them out-of-the-box.&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Name&lt;&#x2F;th&gt;&lt;th&gt;Age&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;Bob&lt;&#x2F;td&gt;&lt;td&gt;27&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;Alice&lt;&#x2F;td&gt;&lt;td&gt;23&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;h4 id=&quot;inline-markdown-within-tables&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#inline-markdown-within-tables&quot; aria-label=&quot;Anchor link for: inline-markdown-within-tables&quot;&gt;🔗&lt;&#x2F;a&gt;Inline Markdown within tables&lt;&#x2F;h4&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Italics&lt;&#x2F;th&gt;&lt;th&gt;Bold&lt;&#x2F;th&gt;&lt;th&gt;Code&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;&lt;em&gt;italics&lt;&#x2F;em&gt;&lt;&#x2F;td&gt;&lt;td&gt;&lt;strong&gt;bold&lt;&#x2F;strong&gt;&lt;&#x2F;td&gt;&lt;td&gt;&lt;code&gt;code&lt;&#x2F;code&gt;&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;h2 id=&quot;code-blocks&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#code-blocks&quot; aria-label=&quot;Anchor link for: code-blocks&quot;&gt;🔗&lt;&#x2F;a&gt;Code Blocks&lt;&#x2F;h2&gt;
+&lt;h4 id=&quot;code-block-with-backticks&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#code-block-with-backticks&quot; aria-label=&quot;Anchor link for: code-block-with-backticks&quot;&gt;🔗&lt;&#x2F;a&gt;Code block with backticks&lt;&#x2F;h4&gt;
+&lt;pre data-lang=&quot;html&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-html &quot;&gt;&lt;code class=&quot;language-html&quot; data-lang=&quot;html&quot;&gt;&lt;span&gt;&amp;lt;!doctype html&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;html &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;lang&lt;&#x2F;span&gt;&lt;span&gt;=&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;en&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;head&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;meta &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;charset&lt;&#x2F;span&gt;&lt;span&gt;=&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;utf-8&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;title&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;Example HTML5 Document&amp;lt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;title&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;head&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;body&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &amp;lt;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;p&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;Test&amp;lt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;p&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;body&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;&#x2F;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;html&lt;&#x2F;span&gt;&lt;span&gt;&amp;gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h4 id=&quot;code-block-indented-with-four-spaces&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#code-block-indented-with-four-spaces&quot; aria-label=&quot;Anchor link for: code-block-indented-with-four-spaces&quot;&gt;🔗&lt;&#x2F;a&gt;Code block indented with four spaces&lt;&#x2F;h4&gt;
+&lt;pre style=&quot;background-color:#2b303b;color:#c0c5ce;&quot;&gt;&lt;code&gt;&lt;span&gt;&amp;lt;!doctype html&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;html lang=&amp;quot;en&amp;quot;&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;head&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &amp;lt;meta charset=&amp;quot;utf-8&amp;quot;&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &amp;lt;title&amp;gt;Example HTML5 Document&amp;lt;&#x2F;title&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;&#x2F;head&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;body&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;  &amp;lt;p&amp;gt;Test&amp;lt;&#x2F;p&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;&#x2F;body&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;&amp;lt;&#x2F;html&amp;gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;list-types&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#list-types&quot; aria-label=&quot;Anchor link for: list-types&quot;&gt;🔗&lt;&#x2F;a&gt;List Types&lt;&#x2F;h2&gt;
+&lt;h4 id=&quot;ordered-list&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#ordered-list&quot; aria-label=&quot;Anchor link for: ordered-list&quot;&gt;🔗&lt;&#x2F;a&gt;Ordered List&lt;&#x2F;h4&gt;
+&lt;ol&gt;
+&lt;li&gt;First item&lt;&#x2F;li&gt;
+&lt;li&gt;Second item&lt;&#x2F;li&gt;
+&lt;li&gt;Third item&lt;&#x2F;li&gt;
+&lt;&#x2F;ol&gt;
+&lt;h4 id=&quot;unordered-list&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#unordered-list&quot; aria-label=&quot;Anchor link for: unordered-list&quot;&gt;🔗&lt;&#x2F;a&gt;Unordered List&lt;&#x2F;h4&gt;
+&lt;ul&gt;
+&lt;li&gt;List item&lt;&#x2F;li&gt;
+&lt;li&gt;Another item&lt;&#x2F;li&gt;
+&lt;li&gt;And another item&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h4 id=&quot;nested-list&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#nested-list&quot; aria-label=&quot;Anchor link for: nested-list&quot;&gt;🔗&lt;&#x2F;a&gt;Nested list&lt;&#x2F;h4&gt;
+&lt;ul&gt;
+&lt;li&gt;Fruit
+&lt;ul&gt;
+&lt;li&gt;Apple&lt;&#x2F;li&gt;
+&lt;li&gt;Orange&lt;&#x2F;li&gt;
+&lt;li&gt;Banana&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;Dairy
+&lt;ul&gt;
+&lt;li&gt;Milk&lt;&#x2F;li&gt;
+&lt;li&gt;Cheese&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h2 id=&quot;other-elements-abbr-sub-sup-kbd-mark&quot;&gt;&lt;a class=&quot;zola-anchor&quot; href=&quot;#other-elements-abbr-sub-sup-kbd-mark&quot; aria-label=&quot;Anchor link for: other-elements-abbr-sub-sup-kbd-mark&quot;&gt;🔗&lt;&#x2F;a&gt;Other Elements — abbr, sub, sup, kbd, mark&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;abbr title=&quot;Graphics Interchange Format&quot;&gt;GIF&lt;&#x2F;abbr&gt; is a bitmap image format.&lt;&#x2F;p&gt;
+&lt;p&gt;H&lt;sub&gt;2&lt;&#x2F;sub&gt;O&lt;&#x2F;p&gt;
+&lt;p&gt;X&lt;sup&gt;n&lt;&#x2F;sup&gt; + Y&lt;sup&gt;n&lt;&#x2F;sup&gt; = Z&lt;sup&gt;n&lt;&#x2F;sup&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Press &lt;kbd&gt;&lt;kbd&gt;CTRL&lt;&#x2F;kbd&gt;+&lt;kbd&gt;ALT&lt;&#x2F;kbd&gt;+&lt;kbd&gt;Delete&lt;&#x2F;kbd&gt;&lt;&#x2F;kbd&gt; to end the session.&lt;&#x2F;p&gt;
+&lt;p&gt;Most &lt;mark&gt;salamanders&lt;&#x2F;mark&gt; are nocturnal, and hunt for insects, worms, and other small creatures.&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+</feed>

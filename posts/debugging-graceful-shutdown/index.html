@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debugging and Enabling graceful shutdown in Kubernetes | Bharat Jain</title>
+  <meta name="title" content="Debugging and Enabling graceful shutdown in Kubernetes">
+<meta name="description" content="" />
+
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=IBM+Plex+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/open-props/easings.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+  <link rel="stylesheet" href="https://bharatkjain.me/styles/light-mode.css">
+  <link id="theme-style" rel="stylesheet" type="text/css">
+</head>
+<body>
+  <header>
+    <a href="https:&#x2F;&#x2F;bharatkjain.me" class="title">
+      <h1>Bharat Jain</h1>
+    </a>
+    <nav>
+      <nav>
+<a href="https:&#x2F;&#x2F;bharatkjain.me">Home</a>
+      <a href="https://bharatkjain.me/posts/">Posts</a>
+      <a href="https://bharatkjain.me/projects/">Projects</a>
+      <a href="https://bharatkjain.me/tils/">TIL</a>
+      <a href="https://bharatkjain.me/contact/">Contact</a></nav>
+      <button class="theme-toggle" id="theme-toggle" title="Toggles light & dark" aria-label="auto" aria-live="polite">
+        <svg class="sun-and-moon" aria-hidden="true" width="24" height="24" viewBox="0 0 24 24">
+          <mask class="moon" id="moon-mask">
+            <rect x="0" y="0" width="100%" height="100%" fill="white" />
+            <circle cx="24" cy="10" r="6" fill="black" />
+          </mask>
+          <circle class="sun" cx="12" cy="12" r="6" mask="url(#moon-mask)" fill="currentColor" />
+          <g class="sun-beams" stroke="currentColor">
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+           </g>
+        </svg>
+      </button>
+    </nav>
+  </header>
+  
+    <h2>Debugging and Enabling graceful shutdown in Kubernetes</h2>
+      <p>
+        <i>
+          <time datetime='2023-10-24T04:00:00+05:30' pubdate>24 Oct, 2023</time>
+        </i>
+      </p>
+  <main>
+    <p>This article is referenced from <a href="https://blog.risingstack.com/graceful-shutdown-node-js-kubernetes/">&quot;Rising Stack - Graceful shutdown with Node.js and Kubernetes&quot;</a>.</p>
+<h2 id="tl-dr"><a class="zola-anchor" href="#tl-dr" aria-label="Anchor link for: tl-dr">🔗</a>TL;DR</h2>
+<h2 id="pre-requisites"><a class="zola-anchor" href="#pre-requisites" aria-label="Anchor link for: pre-requisites">🔗</a>Pre-requisites:</h2>
+<ul>
+<li>Basic Kubernetes knowledge, relation between nodes and pods.</li>
+<li>Understanding of linux signals and handling them in code.</li>
+<li>Kubernetes readiness and liveness probes.</li>
+</ul>
+<h2 id="why-handle-graceful-shutdown"><a class="zola-anchor" href="#why-handle-graceful-shutdown" aria-label="Anchor link for: why-handle-graceful-shutdown">🔗</a>Why handle graceful-shutdown?</h2>
+<p>When running AWS EC2 spot instances in AWS EKS to save cost for infrastructure, the EC2 instance is taken down randomly based on availability, in such cases we have to handle the termination of pods that were running inside the node.</p>
+<p>Even if we’re running workloads on EC2 on-demand instances, there are still chances that some pods can go-down in such cases also we need to handle their termination.</p>
+<p>Whenever a pod gets terminated in Kubernetes, the main process of the container receives the SIGTERM.</p>
+<h2 id="what-is-graceful-shutdown-and-how-to-handle-it-in-kubernetes-workloads"><a class="zola-anchor" href="#what-is-graceful-shutdown-and-how-to-handle-it-in-kubernetes-workloads" aria-label="Anchor link for: what-is-graceful-shutdown-and-how-to-handle-it-in-kubernetes-workloads">🔗</a>What is graceful-shutdown and how to handle it in Kubernetes workloads?</h2>
+<p>In Kubernetes, for a proper graceful shutdown we need to add a readinessProbe to our application’s Deployment yaml and let the Service’s load balancer know during the shutdown that we will not serve more requests so it should stop sending them. We can close the server, tear down the DB connections and exit only after that.</p>
+<h2 id="process-as-shown-in-diagram"><a class="zola-anchor" href="#process-as-shown-in-diagram" aria-label="Anchor link for: process-as-shown-in-diagram">🔗</a>Process(as shown in diagram):</h2>
+<p><img src="/images/graceful-shutdown-k8s.png" alt="" /></p>
+<ol>
+<li>
+<p>Application pod receives SIGTERM signal on process ID 0 because Kubernetes wants to stop it – because of deploy, scale, etc.</p>
+</li>
+<li>
+<p>App (pod) starts to return 500 for GET /health to let readinessProbe (Service) know that it’s not ready to receive more requests.</p>
+</li>
+<li>
+<p>Kubernetes readinessProbe checks GET /health and after (failureThreshold * periodSecond) it stops redirecting traffic to the app (because it continuously returns 500)</p>
+</li>
+<li>
+<p>App waits (failureThreshold * periodSecond) before it starts to shut down – to make sure that the Service is getting notified via readinessProbe fail</p>
+</li>
+<li>
+<p>App starts graceful shutdown</p>
+</li>
+<li>
+<p>App first closes server with live working DB connections</p>
+</li>
+<li>
+<p>App closes databases after the server is closed</p>
+</li>
+<li>
+<p>App exits process</p>
+</li>
+<li>
+<p>Kubernetes force kills the application after 30s (SIGKILL) if it’s still running (in an optimal case it doesn’t happen), we can increase the SIGKILL time using terminationGracePeriodSeconds</p>
+</li>
+</ol>
+<h2 id="how-does-istio-sidecar-handle-the-graceful-shutdown"><a class="zola-anchor" href="#how-does-istio-sidecar-handle-the-graceful-shutdown" aria-label="Anchor link for: how-does-istio-sidecar-handle-the-graceful-shutdown">🔗</a>How does Istio sidecar handle the graceful-shutdown?</h2>
+<p>Istio sidecar intercepts all the incoming traffic to the pod, thus it also halts the traffic, by handling readinessProbe configuration in sidecar, we have seen that even if the readiness probe is not configured correctly in application, the sidecar halts the traffic, and starts draining, we should explicitly keep the readiness probe correctly configured in application container, even though sidecar will halt the traffic.</p>
+<p>Istio configmap change required for istio sidecar graceful termination:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>    defaultConfig:
+</span><span>      holdApplicationUntilProxyStarts: true
+</span><span>      terminationDrainDuration: 60s
+</span><span>      proxyMetadata:
+</span><span>        EXIT_ON_ZERO_ACTIVE_CONNECTIONS: &#39;true&#39;
+</span></code></pre>
+<p>Sidecar waits for 60s so application can terminate the connections and then it kills the sidecar. For more information please refer to istio documentation. </p>
+<p>This was a long-pending issue with sidecar, previously this was handled using preStop hook - issue link.</p>
+<h2 id="gotcha-sigterm-is-sent-to-process-id-0-which-can-be-bash"><a class="zola-anchor" href="#gotcha-sigterm-is-sent-to-process-id-0-which-can-be-bash" aria-label="Anchor link for: gotcha-sigterm-is-sent-to-process-id-0-which-can-be-bash">🔗</a>GOTCHA! - SIGTERM is sent to process ID 0, which can be bash</h2>
+<p>When we added the code for term signal handling, we saw a weird issue where the container exited on receiving the SIGTERM, which meant that something killed it, at this point we realised that Kubernetes is sending the SIGTERM to main process - process ID 0 i.e. the bash parent process which starts the server, then we had to add more support in bash, where we added a trap for SIGTERM and forwarded SIGTERM to application process ID.</p>
+<p>On the other hand, we can avoid the bash in process ID 0 in some cases where there's no script or script can be removed, and we can make the application executable/binary run on process ID 0, so there’s no need to add an extra handler.</p>
+<h3 id="reference-articles"><a class="zola-anchor" href="#reference-articles" aria-label="Anchor link for: reference-articles">🔗</a>Reference articles</h3>
+<ul>
+<li><a href="https://github.com/istio/istio/issues/11130">Making istio sidecar ready before application start - holdApplicationUntilProxyStarts</a></li>
+<li><a href="https://github.com/istio/istio/issues/34855">Draining sidecar connections - terminationDrainDuration</a></li>
+<li><a href="https://istio.io/latest/docs/ops/configuration/mesh/app-health-check/">Istio healthcheck</a></li>
+</ul>
+
+  </main>
+  <p>
+        Tags:
+          <a href="https://bharatkjain.me/tags/istio/">#istio</a>
+          <a href="https://bharatkjain.me/tags/kubernetes/">#kubernetes</a>
+  </p>
+<footer>
+    <div class="social-links">
+        <a href="https://github.com/BharatKJain" target="_blank" rel="noopener noreferrer" title="GitHub" class="social-icon"><i data-feather="github"></i></a>
+        <a href="/posts/atom.xml" target="_blank" rel="noopener noreferrer" title="RSS Feed" class="social-icon"><i data-feather="rss"></i></a>
+    </div>
+  </footer>  
+  <script>
+    feather.replace();
+  </script>
+  <script src="https://bharatkjain.me/js/theme.js"></script>
+</body>
+
+</html>
