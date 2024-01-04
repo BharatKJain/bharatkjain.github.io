@@ -1,0 +1,6 @@
+[[project]]
+name = "Coming soon"
+description = "Building things in background, will be updated soon"
+links = [
+  { name = "", url="" },
+]
