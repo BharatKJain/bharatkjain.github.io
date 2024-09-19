@@ -1,0 +1,18 @@
+:root {
+    --color-background: #333;
+    --color-primary-text: #ddd;
+    --color-headline: #eee;
+    --color-link: #8cc2dd;
+    --color-code-bg: #777;
+    --color-blockquote: #ccc;
+    --color-input-bg: #252525;
+    --color-helptext: #aaa;
+    /* Projects section */
+    --color-background-project: #444;
+    --color-background-project-hover: #555;
+}
+
+.theme-toggle {
+    --icon-fill: hsla(40, 100%, 50%, 0.841);
+    --icon-fill-hover: hsla(44, 100%, 29%, 0.878);
+}
