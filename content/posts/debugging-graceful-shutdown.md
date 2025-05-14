@@ -1,5 +1,5 @@
 +++
-title = "Debugging and Enabling graceful shutdown in Kubernetes"
+title = "Debugging and enabling graceful shutdown with Istio in Kubernetes"
 date = 2023-10-24T04:00:00+05:30
 type = "post"
 description = "Implementing graceful shutdown in applications hosted with Istio"
@@ -9,11 +9,6 @@ tags = ["istio", "kubernetes"]
 +++
 
 This article is referenced from ["Rising Stack - Graceful shutdown with Node.js and Kubernetes"](https://blog.risingstack.com/graceful-shutdown-node-js-kubernetes/).
-
-
-## TL;DR
-
-
 
 ## Pre-requisites:
 
